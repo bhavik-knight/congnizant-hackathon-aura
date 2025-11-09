@@ -1,3 +1,5 @@
+import { motion } from 'framer-motion';
+import { useState, useEffect } from 'react';
 import {
     Card,
     CardContent,
@@ -19,6 +21,37 @@ import {
 
 const CarbonTimeline = ({ data, title = "24-Hour Carbon Intensity Forecast" }) => {
     const theme = useTheme();
+    
+    // baseline threshold will be fetched from backend seasonal_baseline.json if not provided in data
+    const [baselineThreshold, setBaselineThreshold] = useState(
+        // prefer baseline included on data points, else undefined
+        data?.[0]?.baselineThreshold ?? null
+    );
+
+    useEffect(() => {
+        // If data includes a baselineThreshold use it
+        if (data && data.length && (data[0].baselineThreshold || data[0].baselineThreshold === 0)) {
+            setBaselineThreshold(data[0].baselineThreshold);
+            return;
+        }
+
+        // Otherwise fetch seasonal baseline from backend and pick current month's value
+        const fetchBaseline = async () => {
+            try {
+                const resp = await fetch('/api/seasonal-baseline');
+                const json = await resp.json();
+                const seasonal = json?.data || {};
+                const month = new Date().getMonth() + 1; // 1-12
+                const val = parseFloat(seasonal[String(month)] ?? seasonal[month] ?? 350);
+                setBaselineThreshold(val);
+            } catch (e) {
+                // fallback
+                setBaselineThreshold(350);
+            }
+        };
+
+        fetchBaseline();
+    }, [data]);
 
     // Mock data if none provided
     const mockData = [
@@ -70,15 +103,21 @@ const CarbonTimeline = ({ data, title = "24-Hour Carbon Intensity Forecast" }) =
                     <Typography variant="body2" color="text.secondary">
                         Carbon Intensity: {payload[0].value} gCO₂/kWh
                     </Typography>
-                    <Typography
-                        variant="caption"
-                        sx={{
-                            color: data.windowType === 'green' ? 'success.main' : 'error.main',
-                            fontWeight: 600,
-                        }}
-                    >
-                        {data.windowType === 'green' ? 'Green Window' : 'Dirty Window'}
-                    </Typography>
+                    {(() => {
+                        const wt = data.windowType ?? data.window_type ?? '';
+                        const isGreen = String(wt).toLowerCase().includes('green');
+                        return (
+                            <Typography
+                                variant="caption"
+                                sx={{
+                                    color: isGreen ? 'success.main' : 'error.main',
+                                    fontWeight: 600,
+                                }}
+                            >
+                                {isGreen ? 'Green Window' : 'Dirty Window'}
+                            </Typography>
+                        );
+                    })()}
                 </Box>
             );
         }
@@ -86,82 +125,121 @@ const CarbonTimeline = ({ data, title = "24-Hour Carbon Intensity Forecast" }) =
     };
 
     return (
-        <Card>
-            <CardHeader
-                title={title}
-                subheader="Real-time carbon intensity with green window identification"
-            />
-            <CardContent>
-                <Box sx={{ width: '100%', height: 400 }}>
-                    <ResponsiveContainer>
-                        <LineChart data={chartData} margin={{ top: 5, right: 30, left: 20, bottom: 5 }}>
-                            <CartesianGrid strokeDasharray="3 3" stroke={theme.palette.divider} />
-                            <XAxis
-                                dataKey="hour"
-                                stroke={theme.palette.text.secondary}
-                                fontSize={12}
-                            />
-                            <YAxis
-                                stroke={theme.palette.text.secondary}
-                                fontSize={12}
-                                label={{
-                                    value: 'gCO₂/kWh',
-                                    angle: -90,
-                                    position: 'insideLeft',
-                                    style: { textAnchor: 'middle' }
-                                }}
-                            />
-                            <Tooltip content={<CustomTooltip />} />
-                            <ReferenceLine
-                                y={350}
-                                stroke={theme.palette.warning.main}
-                                strokeDasharray="5 5"
-                                label={{
-                                    value: "Baseline Threshold",
-                                    position: "topRight",
-                                    style: { fontSize: '12px', fill: theme.palette.warning.main }
-                                }}
-                            />
-                            <Line
-                                type="monotone"
-                                dataKey="carbonIntensity"
-                                stroke={theme.palette.primary.main}
-                                strokeWidth={3}
-                                dot={{ fill: theme.palette.primary.main, strokeWidth: 2, r: 4 }}
-                                activeDot={{ r: 6, stroke: theme.palette.primary.main, strokeWidth: 2 }}
-                            />
-                        </LineChart>
-                    </ResponsiveContainer>
-                </Box>
+        <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.5 }}
+        >
+            <Card>
+                <CardHeader
+                    title={title}
+                    subheader="Real-time carbon intensity with green window identification"
+                />
+                <CardContent>
+                    <Box sx={{ width: '100%', height: 400 }}>
+                        <ResponsiveContainer>
+                            <LineChart data={chartData} margin={{ top: 5, right: 30, left: 20, bottom: 5 }}>
+                                <CartesianGrid strokeDasharray="3 3" stroke={theme.palette.divider} />
+                                <XAxis
+                                    dataKey="hour"
+                                    stroke={theme.palette.text.secondary}
+                                    fontSize={12}
+                                    interval={0}
+                                    angle={-45}
+                                    textAnchor="end"
+                                    height={50}
+                                    tickMargin={15}
+                                />
+                                <YAxis
+                                    stroke={theme.palette.text.secondary}
+                                    fontSize={12}
+                                    label={{
+                                        value: 'gCO₂/kWh',
+                                        angle: -90,
+                                        position: 'insideLeft',
+                                        style: { textAnchor: 'middle' }
+                                    }}
+                                />
+                                <Tooltip content={<CustomTooltip />} />
+                                <ReferenceLine
+                                    y={baselineThreshold}
+                                    stroke={theme.palette.warning.main}
+                                    strokeDasharray="5 5"
+                                    label={{
+                                        value: `Baseline Threshold (${baselineThreshold} gCO₂/kWh)`,
+                                        position: "topRight",
+                                        style: { fontSize: '12px', fill: theme.palette.warning.main }
+                                    }}
+                                />
+                                <Line
+                                    type="monotone"
+                                    dataKey="carbonIntensity"
+                                    strokeWidth={2}
+                                    dot={(props) => {
+                                        const payloadItem = props?.payload || {};
+                                        const wt = payloadItem.windowType ?? payloadItem.window_type ?? '';
+                                        const isGreen = String(wt).toLowerCase().includes('green');
+                                        return (
+                                            <circle
+                                                cx={props.cx}
+                                                cy={props.cy}
+                                                r={4}
+                                                fill={isGreen ? theme.palette.success.main : theme.palette.error.main}
+                                                stroke={isGreen ? theme.palette.success.main : theme.palette.error.main}
+                                                strokeWidth={2}
+                                            />
+                                        );
+                                    }}
+                                    activeDot={(props) => {
+                                        const payloadItem = props?.payload || {};
+                                        const wt = payloadItem.windowType ?? payloadItem.window_type ?? '';
+                                        const isGreen = String(wt).toLowerCase().includes('green');
+                                        return (
+                                            <circle
+                                                cx={props.cx}
+                                                cy={props.cy}
+                                                r={6}
+                                                fill={isGreen ? theme.palette.success.main : theme.palette.error.main}
+                                                stroke={isGreen ? theme.palette.success.main : theme.palette.error.main}
+                                                strokeWidth={2}
+                                            />
+                                        );
+                                    }}
+                                    stroke={theme.palette.primary.main}
+                                />
+                            </LineChart>
+                        </ResponsiveContainer>
+                    </Box>
 
-                <Box sx={{ display: 'flex', justifyContent: 'center', mt: 2, gap: 3 }}>
-                    <Box sx={{ display: 'flex', alignItems: 'center' }}>
-                        <Box
-                            sx={{
-                                width: 12,
-                                height: 12,
-                                borderRadius: '50%',
-                                bgcolor: theme.palette.success.main,
-                                mr: 1,
-                            }}
-                        />
-                        <Typography variant="body2">Green Window (&lt; 350 gCO₂/kWh)</Typography>
+                    <Box sx={{ display: 'flex', justifyContent: 'center', mt: 2, gap: 3 }}>
+                        <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                            <Box
+                                sx={{
+                                    width: 12,
+                                    height: 12,
+                                    borderRadius: '50%',
+                                    bgcolor: theme.palette.success.main,
+                                    mr: 1,
+                                }}
+                            />
+                            <Typography variant="body2">Green Window (&lt; {baselineThreshold} gCO₂/kWh)</Typography>
+                        </Box>
+                        <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                            <Box
+                                sx={{
+                                    width: 12,
+                                    height: 12,
+                                    borderRadius: '50%',
+                                    bgcolor: theme.palette.error.main,
+                                    mr: 1,
+                                }}
+                            />
+                            <Typography variant="body2">Dirty Window (&gt; {baselineThreshold} gCO₂/kWh)</Typography>
+                        </Box>
                     </Box>
-                    <Box sx={{ display: 'flex', alignItems: 'center' }}>
-                        <Box
-                            sx={{
-                                width: 12,
-                                height: 12,
-                                borderRadius: '50%',
-                                bgcolor: theme.palette.error.main,
-                                mr: 1,
-                            }}
-                        />
-                        <Typography variant="body2">Dirty Window (&gt; 350 gCO₂/kWh)</Typography>
-                    </Box>
-                </Box>
-            </CardContent>
-        </Card>
+                </CardContent>
+            </Card>
+        </motion.div>
     );
 };
 

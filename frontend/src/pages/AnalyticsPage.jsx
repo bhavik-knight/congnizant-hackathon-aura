@@ -33,17 +33,73 @@ import {
 import MetricCard from '../components/MetricCard';
 import { useAnalyticsData } from '../hooks/useAuraData';
 
+const CustomTooltip = ({ active, payload, label }) => {
+    if (active && payload && payload.length) {
+        return (
+            <Box
+                sx={{
+                    bgcolor: 'background.paper',
+                    p: 2,
+                    borderRadius: 2,
+                    boxShadow: '0 4px 20px rgba(0,0,0,0.1)',
+                    border: '1px solid',
+                    borderColor: 'divider',
+                }}
+            >
+                <Typography variant="subtitle2" sx={{ mb: 1 }}>
+                    {label}
+                </Typography>
+                {payload.map((entry, index) => (
+                    <Box key={index} sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                        <Box
+                            sx={{
+                                width: 12,
+                                height: 12,
+                                borderRadius: '50%',
+                                bgcolor: entry.color,
+                            }}
+                        />
+                        <Typography variant="body2">
+                            {entry.name}: {entry.value} {entry.unit || ''}
+                        </Typography>
+                    </Box>
+                ))}
+            </Box>
+        );
+    }
+    return null;
+};
+
+const LoadingOverlay = () => (
+    <Box
+        sx={{
+            position: 'fixed',
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            bgcolor: 'rgba(255,255,255,0.8)',
+            zIndex: 9999,
+            display: 'flex',
+            justifyContent: 'center',
+            alignItems: 'center',
+            backdropFilter: 'blur(5px)',
+        }}
+    >
+        <Box sx={{ textAlign: 'center' }}>
+            <CircularProgress size={60} />
+            <Typography variant="h6" sx={{ mt: 2, color: 'text.secondary' }}>
+                Loading Analytics...
+            </Typography>
+        </Box>
+    </Box>
+);
+
 const AnalyticsPage = () => {
     const { loading, error } = useAnalyticsData();
 
     if (loading) {
-        return (
-            <Container maxWidth="lg">
-                <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '60vh' }}>
-                    <CircularProgress size={60} />
-                </Box>
-            </Container>
-        );
+        return <LoadingOverlay />;
     }
 
     // Mock data for charts
@@ -147,21 +203,25 @@ const AnalyticsPage = () => {
                             <Box sx={{ width: '100%', height: 300 }}>
                                 <ResponsiveContainer>
                                     <LineChart data={carbonSavingsData}>
-                                        <CartesianGrid strokeDasharray="3 3" />
-                                        <XAxis dataKey="month" />
-                                        <YAxis />
-                                        <Tooltip
-                                            formatter={(value, name) => [
-                                                `${value} kg`,
-                                                name === 'savings' ? 'Actual Savings' : 'Target'
-                                            ]}
+                                        <CartesianGrid strokeDasharray="3 3" stroke="rgba(0,0,0,0.1)" />
+                                        <XAxis
+                                            dataKey="month"
+                                            stroke="#64748b"
+                                            tick={{ fill: '#64748b' }}
                                         />
+                                        <YAxis
+                                            stroke="#64748b"
+                                            tick={{ fill: '#64748b' }}
+                                        />
+                                        <Tooltip content={<CustomTooltip />} />
                                         <Line
                                             type="monotone"
                                             dataKey="savings"
                                             stroke="#16a34a"
                                             strokeWidth={3}
-                                            name="savings"
+                                            name="Actual Savings"
+                                            dot={{ stroke: '#16a34a', strokeWidth: 2, r: 4, fill: '#fff' }}
+                                            activeDot={{ r: 6, stroke: '#16a34a', strokeWidth: 2, fill: '#fff' }}
                                         />
                                         <Line
                                             type="monotone"
@@ -169,7 +229,9 @@ const AnalyticsPage = () => {
                                             stroke="#dc2626"
                                             strokeWidth={2}
                                             strokeDasharray="5 5"
-                                            name="target"
+                                            name="Target"
+                                            dot={{ stroke: '#dc2626', strokeWidth: 2, r: 4, fill: '#fff' }}
+                                            activeDot={{ r: 6, stroke: '#dc2626', strokeWidth: 2, fill: '#fff' }}
                                         />
                                     </LineChart>
                                 </ResponsiveContainer>

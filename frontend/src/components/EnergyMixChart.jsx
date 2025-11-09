@@ -1,3 +1,4 @@
+import { motion } from 'framer-motion';
 import {
     Card,
     CardContent,
@@ -80,71 +81,79 @@ const EnergyMixChart = ({
     };
 
     return (
-        <Card>
-            <CardHeader
-                title={title}
-                subheader={subtitle}
-            />
-            <CardContent>
-                <Box sx={{ width: '100%', height: 300 }}>
-                    <ResponsiveContainer>
-                        <PieChart>
-                            <Pie
-                                data={chartData}
-                                cx="50%"
-                                cy="50%"
-                                labelLine={false}
-                                label={renderCustomizedLabel}
-                                outerRadius={100}
-                                fill="#8884d8"
-                                dataKey="value"
-                            >
-                                {chartData.map((entry, index) => (
-                                    <Cell key={`cell-${index}`} fill={entry.color} />
-                                ))}
-                            </Pie>
-                            <Tooltip content={<CustomTooltip />} />
-                        </PieChart>
-                    </ResponsiveContainer>
-                </Box>
+        <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.5 }}
+        >
+            <Card>
+                <CardHeader
+                    title={title}
+                    subheader={subtitle}
+                />
+                <CardContent>
+                    <Box sx={{ width: '100%', height: 300 }}>
+                        <ResponsiveContainer>
+                            <PieChart>
+                                <Pie
+                                    data={chartData}
+                                    cx="50%"
+                                    cy="50%"
+                                    labelLine={false}
+                                    label={renderCustomizedLabel}
+                                    outerRadius={100}
+                                    fill="#8884d8"
+                                    dataKey="value"
+                                    isAnimationActive={true}
+                                    animationDuration={800}
+                                >
+                                    {chartData.map((entry, index) => (
+                                        <Cell key={`cell-${index}`} fill={entry.color} />
+                                    ))}
+                                </Pie>
+                                <Tooltip content={<CustomTooltip />} />
+                            </PieChart>
+                        </ResponsiveContainer>
+                    </Box>
 
-                <Box sx={{ display: 'flex', justifyContent: 'center', mt: 2, gap: 3 }}>
-                    {chartData.map((item, index) => (
-                        <Box key={index} sx={{ display: 'flex', alignItems: 'center' }}>
-                            <Box
-                                sx={{
-                                    width: 16,
-                                    height: 16,
-                                    borderRadius: '50%',
-                                    bgcolor: item.color,
-                                    mr: 1,
-                                }}
-                            />
-                            <Typography variant="body2" sx={{ fontWeight: 500 }}>
-                                {item.name}: {item.value}%
+                    <Box sx={{ display: 'flex', justifyContent: 'center', mt: 2, gap: 3 }}>
+                        {chartData.map((item, index) => (
+                            <Box key={index} sx={{ display: 'flex', alignItems: 'center' }}>
+                                <Box
+                                    sx={{
+                                        width: 16,
+                                        height: 16,
+                                        borderRadius: '50%',
+                                        bgcolor: item.color,
+                                        mr: 1,
+                                    }}
+                                />
+                                <Typography variant="body2" sx={{ fontWeight: 500 }}>
+                                    {item.name}: {item.value}%
+                                </Typography>
+                            </Box>
+                        ))}
+                    </Box>
+
+                    <Box sx={{ mt: 3, p: 2, bgcolor: 'background.default', borderRadius: 2 }}>
+                        <Typography variant="body2" sx={{ mb: 1, fontWeight: 600 }}>
+                            Key Insights:
+                        </Typography>
+                        <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.5 }}>
+                            <Typography variant="caption" color="text.secondary">
+                                • {chartData[0]?.name} generation: {chartData[0]?.value}% ({chartData[0]?.value * 10} MW)
+                            </Typography>
+                            <Typography variant="caption" color="text.secondary">
+                                • {chartData[1]?.name} generation: {chartData[1]?.value}% ({chartData[1]?.value * 10} MW)
+                            </Typography>
+                            <Typography variant="caption" color="text.secondary">
+                                • Carbon intensity: {chartData[1]?.value * 7} gCO₂/kWh average
                             </Typography>
                         </Box>
-                    ))}
-                </Box>
-
-                <Box sx={{ mt: 3, p: 2, bgcolor: 'background.default', borderRadius: 2 }}>
-                    <Typography variant="body2" sx={{ mb: 1, fontWeight: 600 }}>
-                        Key Insights:
-                    </Typography>
-                    <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.5 }}>
-                        <Typography variant="caption" color="text.secondary">
-                            • {chartData[0]?.name} generation: {chartData[0]?.value}% ({chartData[0]?.value * 10} MW)
-                        </Typography>
-                        <Typography variant="caption" color="text.secondary">
-                            • {chartData[1]?.name} generation: {chartData[1]?.value}% ({chartData[1]?.value * 10} MW)
-                        </Typography>
-                        <Typography variant="caption" color="text.secondary">
-                            • Carbon intensity: {chartData[1]?.value * 7} gCO₂/kWh average
-                        </Typography>
                     </Box>
-                </Box>
-            </CardContent>
-        </Card>
+                </CardContent>
+            </Card>
+        </motion.div>
     );
 };
 

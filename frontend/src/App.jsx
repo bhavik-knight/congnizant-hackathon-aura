@@ -1,5 +1,6 @@
 import React from 'react';
-import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
+import { AnimatePresence, motion } from 'framer-motion';
+import { BrowserRouter as Router, Routes, Route, useLocation } from 'react-router-dom';
 import { ThemeProvider, createTheme } from '@mui/material/styles';
 import CssBaseline from '@mui/material/CssBaseline';
 import { Box } from '@mui/material';
@@ -17,19 +18,40 @@ import AnalyticsPage from './pages/AnalyticsPage';
 // Material-UI Theme
 const theme = createTheme({
     palette: {
+        mode: 'light',
         primary: {
             main: '#2563eb', // Blue
             light: '#60a5fa',
             dark: '#1d4ed8',
+            contrastText: '#ffffff',
         },
         secondary: {
             main: '#16a34a', // Green
             light: '#4ade80',
             dark: '#15803d',
+            contrastText: '#ffffff',
+        },
+        success: {
+            main: '#059669',
+            light: '#34d399',
+            dark: '#047857',
+            contrastText: '#ffffff',
+        },
+        warning: {
+            main: '#d97706',
+            light: '#fbbf24',
+            dark: '#b45309',
+            contrastText: '#ffffff',
         },
         background: {
             default: '#f8fafc',
             paper: '#ffffff',
+        },
+        gradients: {
+            primary: 'linear-gradient(135deg, #2563eb 0%, #60a5fa 100%)',
+            secondary: 'linear-gradient(135deg, #16a34a 0%, #4ade80 100%)',
+            success: 'linear-gradient(135deg, #059669 0%, #34d399 100%)',
+            warning: 'linear-gradient(135deg, #d97706 0%, #fbbf24 100%)',
         },
     },
     typography: {
@@ -80,6 +102,68 @@ const theme = createTheme({
     },
 });
 
+const AnimatedRoutes = () => {
+    const location = useLocation();
+    return (
+        <AnimatePresence mode="wait">
+            <Routes location={location} key={location.pathname}>
+                <Route
+                    path="/"
+                    element={
+                        <motion.div
+                            initial={{ opacity: 0, y: 20 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            exit={{ opacity: 0, y: -20 }}
+                            transition={{ duration: 0.3 }}
+                        >
+                            <HomePage />
+                        </motion.div>
+                    }
+                />
+                <Route
+                    path="/dashboard"
+                    element={
+                        <motion.div
+                            initial={{ opacity: 0, y: 20 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            exit={{ opacity: 0, y: -20 }}
+                            transition={{ duration: 0.3 }}
+                        >
+                            <DashboardPage />
+                        </motion.div>
+                    }
+                />
+                <Route
+                    path="/notifications"
+                    element={
+                        <motion.div
+                            initial={{ opacity: 0, y: 20 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            exit={{ opacity: 0, y: -20 }}
+                            transition={{ duration: 0.3 }}
+                        >
+                            <NotificationCenterPage />
+                        </motion.div>
+                    }
+                />
+                <Route
+                    path="/analytics"
+                    element={
+                        <motion.div
+                            initial={{ opacity: 0, y: 20 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            exit={{ opacity: 0, y: -20 }}
+                            transition={{ duration: 0.3 }}
+                        >
+                            <AnalyticsPage />
+                        </motion.div>
+                    }
+                />
+            </Routes>
+        </AnimatePresence>
+    );
+};
+
 function App() {
     const [sidebarOpen, setSidebarOpen] = React.useState(false);
 
@@ -105,12 +189,7 @@ function App() {
                             transition: 'margin-left 0.3s ease-in-out',
                         }}
                     >
-                        <Routes>
-                            <Route path="/" element={<HomePage />} />
-                            <Route path="/dashboard" element={<DashboardPage />} />
-                            <Route path="/notifications" element={<NotificationCenterPage />} />
-                            <Route path="/analytics" element={<AnalyticsPage />} />
-                        </Routes>
+                        <AnimatedRoutes />
                     </Box>
                 </Box>
             </Router>

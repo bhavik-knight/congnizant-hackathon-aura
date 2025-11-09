@@ -18,17 +18,36 @@ import EnergyMixChart from '../components/EnergyMixChart';
 import MetricCard from '../components/MetricCard';
 import { useDashboardData } from '../hooks/useAuraData';
 
+const LoadingOverlay = () => (
+    <Box
+        sx={{
+            position: 'fixed',
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            bgcolor: 'rgba(255,255,255,0.8)',
+            zIndex: 9999,
+            display: 'flex',
+            justifyContent: 'center',
+            alignItems: 'center',
+            backdropFilter: 'blur(5px)',
+        }}
+    >
+        <Box sx={{ textAlign: 'center' }}>
+            <CircularProgress size={60} />
+            <Typography variant="h6" sx={{ mt: 2, color: 'text.secondary' }}>
+                Loading Dashboard...
+            </Typography>
+        </Box>
+    </Box>
+);
+
 const DashboardPage = () => {
     const { data, loading, error, refreshData } = useDashboardData();
 
     if (loading && !data.carbonForecast) {
-        return (
-            <Container maxWidth="lg">
-                <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '60vh' }}>
-                    <CircularProgress size={60} />
-                </Box>
-            </Container>
-        );
+        return <LoadingOverlay />;
     }
 
     return (
@@ -60,8 +79,19 @@ const DashboardPage = () => {
             )}
 
             {/* Key Metrics */}
-            <Grid container spacing={3} sx={{ mb: 4 }}>
-                <Grid item xs={12} sm={6} md={3}>
+            <Box
+                component="section"
+                sx={{
+                    display: 'flex',
+                    flexDirection: { xs: 'column', md: 'row' },
+                    gap: 2,
+                    flexWrap: 'wrap',
+                    justifyContent: 'space-evenly',
+                    alignItems: 'stretch',
+                    mb: 4,
+                }}
+            >
+                <Box sx={{ px: 1, display: 'flex', flex: '1 1 220px' }}>
                     <MetricCard
                         title="Active Users"
                         value="2,847"
@@ -71,8 +101,8 @@ const DashboardPage = () => {
                         trendValue="12%"
                         color="primary"
                     />
-                </Grid>
-                <Grid item xs={12} sm={6} md={3}>
+                </Box>
+                <Box sx={{ px: 1, display: 'flex', flex: '1 1 220px' }}>
                     <MetricCard
                         title="CO₂ Saved Today"
                         value="1.2 tons"
@@ -82,8 +112,8 @@ const DashboardPage = () => {
                         trendValue="8%"
                         color="secondary"
                     />
-                </Grid>
-                <Grid item xs={12} sm={6} md={3}>
+                </Box>
+                <Box sx={{ px: 1, display: 'flex', flex: '1 1 220px' }}>
                     <MetricCard
                         title="Green Windows"
                         value="18/24 hrs"
@@ -93,8 +123,8 @@ const DashboardPage = () => {
                         trendValue="Optimal"
                         color="success"
                     />
-                </Grid>
-                <Grid item xs={12} sm={6} md={3}>
+                </Box>
+                <Box sx={{ px: 1, display: 'flex', flex: '1 1 220px' }}>
                     <MetricCard
                         title="Grid Efficiency"
                         value="94.2%"
@@ -104,17 +134,18 @@ const DashboardPage = () => {
                         trendValue="2.1%"
                         color="warning"
                     />
-                </Grid>
-            </Grid>
+                </Box>
+            </Box>
 
             {/* Charts Section */}
             <Grid container spacing={4}>
                 <Grid item xs={12} lg={8}>
                     <CarbonTimeline
                         data={data.carbonForecast?.data?.hourly_data?.map(item => ({
-                            hour: item.time,
-                            carbonIntensity: item.carbon_intensity_gco2_per_kwh,
-                            windowType: item.window_type,
+                            hour: item.hour != null ? `${String(item.hour).padStart(2, '0')}:00` : (item.timestamp ? item.timestamp : ''),
+                            carbonIntensity: item.carbon_intensity_gco2_per_kwh ?? item.carbon_intensity_gco2_per_kwh,
+                            windowType: item.window_type ?? item.windowType ?? 'dirty',
+                            baselineThreshold: data.carbonForecast?.data?.forecast_period?.baseline_threshold
                         }))}
                     />
                 </Grid>
