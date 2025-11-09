@@ -76,6 +76,7 @@ http://localhost:8000
 ```
 
 ### Endpoints
+http://localhost:8000/docs
 
 #### 1. Health Check
 **GET /**

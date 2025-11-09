@@ -30,13 +30,14 @@ A professional React frontend for NS Power's AI-powered energy optimization plat
 
 ### 1. Install Node.js 22 LTS
 ```bash
+curl -o- https://fnm.vercel.app/install | bash
 fnm install 22
 fnm use 22
 ```
 
 ### 2. Install pnpm
 ```bash
-npm install -g pnpm
+corepack enable pnpm
 ```
 
 ### 3. Install Dependencies
