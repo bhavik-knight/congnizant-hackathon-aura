@@ -143,50 +143,62 @@ const AnalyticsPage = () => {
             )}
 
             {/* Key Metrics */}
-            <Grid container spacing={3} sx={{ mb: 4 }}>
-                <Grid item xs={12} sm={6} md={3}>
-                    <MetricCard
-                        title="Total CO₂ Saved"
-                        value="1,250 kg"
-                        subtitle="This month"
-                        icon={NatureIcon}
-                        trend="up"
-                        trendValue="15%"
-                        color="secondary"
-                    />
+            <Grid container spacing={3} sx={{ mb: 4 }} alignItems="stretch">
+                <Grid item xs={12} sm={6} md={3} sx={{ display: 'flex' }}>
+                    <Box sx={{ width: '100%', display: 'flex' }}>
+                        <MetricCard
+                            title="Total CO₂ Saved"
+                            value="1,250 kg"
+                            subtitle="This month"
+                            icon={NatureIcon}
+                            trend="up"
+                            trendValue="15%"
+                            color="secondary"
+                            sx={{ height: '100%' }}
+                        />
+                    </Box>
                 </Grid>
-                <Grid item xs={12} sm={6} md={3}>
-                    <MetricCard
-                        title="Active Participants"
-                        value="2,847"
-                        subtitle="72% participation rate"
-                        icon={AssessmentIcon}
-                        trend="up"
-                        trendValue="8%"
-                        color="primary"
-                    />
+                <Grid item xs={12} sm={6} md={3} sx={{ display: 'flex' }}>
+                    <Box sx={{ width: '100%', display: 'flex' }}>
+                        <MetricCard
+                            title="Active Participants"
+                            value="2,847"
+                            subtitle="72% participation rate"
+                            icon={AssessmentIcon}
+                            trend="up"
+                            trendValue="8%"
+                            color="primary"
+                            sx={{ height: '100%' }}
+                        />
+                    </Box>
                 </Grid>
-                <Grid item xs={12} sm={6} md={3}>
-                    <MetricCard
-                        title="Grid Efficiency"
-                        value="94.2%"
-                        subtitle="Peak demand optimization"
-                        icon={TrendingUpIcon}
-                        trend="up"
-                        trendValue="2.1%"
-                        color="success"
-                    />
+                <Grid item xs={12} sm={6} md={3} sx={{ display: 'flex' }}>
+                    <Box sx={{ width: '100%', display: 'flex' }}>
+                        <MetricCard
+                            title="Grid Efficiency"
+                            value="94.2%"
+                            subtitle="Peak demand optimization"
+                            icon={TrendingUpIcon}
+                            trend="up"
+                            trendValue="2.1%"
+                            color="success"
+                            sx={{ height: '100%' }}
+                        />
+                    </Box>
                 </Grid>
-                <Grid item xs={12} sm={6} md={3}>
-                    <MetricCard
-                        title="Cost Savings"
-                        value="$125K"
-                        subtitle="Monthly operational savings"
-                        icon={TimelineIcon}
-                        trend="up"
-                        trendValue="12%"
-                        color="warning"
-                    />
+                <Grid item xs={12} sm={6} md={3} sx={{ display: 'flex' }}>
+                    <Box sx={{ width: '100%', display: 'flex' }}>
+                        <MetricCard
+                            title="Cost Savings"
+                            value="$125K"
+                            subtitle="Monthly operational savings"
+                            icon={TimelineIcon}
+                            trend="up"
+                            trendValue="12%"
+                            color="warning"
+                            sx={{ height: '100%' }}
+                        />
+                    </Box>
                 </Grid>
             </Grid>
 
