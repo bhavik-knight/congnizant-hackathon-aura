@@ -1,4 +1,5 @@
 from fastapi import FastAPI, HTTPException
+from fastapi.middleware.cors import CORSMiddleware
 from backend.models import (
     OptimizeRequest, OptimizeResponse, TimeWindow,
     AvailableTimeRangesResponse, TimeRange,
@@ -7,6 +8,7 @@ from backend.models import (
 )
 import json
 import os
+import time
 import pandas as pd
 import numpy as np
 from pathlib import Path
@@ -16,6 +18,20 @@ from typing import List
 import subprocess
 
 app = FastAPI(title="AURA Energy Optimization API", version="1.0.0")
+
+origins = [
+    "http://localhost",
+    "http://localhost:3000",  # Allow your frontend origin
+    "http://localhost:5173",  # Vite dev server
+]
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=origins,
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 # Constants
 ROOT = Path(__file__).parent.parent
@@ -140,6 +156,14 @@ async def predict_demand():
     Generates fresh forecast data and returns it.
     """
     try:
+        # Check if we have cached forecast data that's less than 15 minutes old
+        cache_file = Path(__file__).parent / '.forecast_cache.json'
+        if cache_file.exists():
+            cache_age = time.time() - cache_file.stat().st_mtime
+            if cache_age < 900:  # 15 minutes in seconds
+                with open(cache_file, 'r') as f:
+                    return PredictDemandResponse(**json.load(f))
+
         # Generate fresh forecast data
         forecast_df = get_forecast_data()
 
@@ -183,11 +207,18 @@ async def predict_demand():
             }
         }
 
-        return PredictDemandResponse(
+        response = PredictDemandResponse(
             success=True,
             data=response_data,
             message="Successfully predicted 24-hour demand with carbon intensity"
         )
+
+        # Cache the response
+        cache_file = Path(__file__).parent / '.forecast_cache.json'
+        with open(cache_file, 'w') as f:
+            json.dump(response.model_dump(), f)
+
+        return response
 
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Failed to predict demand: {str(e)}")
@@ -645,6 +676,26 @@ async def get_24h_forecast():
         raise
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Failed to retrieve forecast data: {str(e)}")
+
+
+@app.get("/api/seasonal-baseline")
+async def get_seasonal_baseline():
+    """
+    Return the seasonal baseline JSON file (monthly carbon intensity baselines).
+    """
+    try:
+        seasonal_file = ROOT / 'outputs' / 'seasonal_baseline.json'
+        if not seasonal_file.exists():
+            raise HTTPException(status_code=404, detail="seasonal_baseline.json not found")
+
+        with open(seasonal_file, 'r') as f:
+            seasonal = json.load(f)
+
+        return {"success": True, "data": seasonal}
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to read seasonal baseline: {str(e)}")
 
 @app.get("/")
 async def root():

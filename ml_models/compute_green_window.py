@@ -88,9 +88,9 @@ def forecast_24h_demand(steps=24):
     future_index = pd.date_range(start=last_ts + pd.Timedelta(hours=1), periods=steps, freq='H')
     forecast_df = pd.DataFrame({'ds': future_index, 'Forecast_Load_MW': np.round(forecast_mean.values, 2)})
 
-    # Map seasonal baseline per month
+    # Map seasonal baseline per month using timestamp's actual month
     def baseline_for_ts(ts):
-        m = ts.month
+        m = pd.Timestamp(ts).month  # Ensure we get month from timestamp
         # seasonal keys may be strings or ints
         return float(seasonal.get(str(m)) or seasonal.get(m) or 0.0)
 
@@ -141,8 +141,8 @@ def classify_windows_by_carbon_intensity(forecast_df):
     with open(SEASONAL, 'r') as f:
         seasonal_baselines = json.load(f)
 
-    # Get current month for baseline lookup
-    current_month = pd.Timestamp.now().month
+    # Get month from the forecast data's timestamp
+    current_month = pd.Timestamp(forecast_df['ds'].iloc[0]).month  # Use the month from forecast data
     baseline_threshold = float(seasonal_baselines.get(str(current_month)) or seasonal_baselines.get(current_month) or 400.0)  # Default to 400 gCO2/kWh
 
     print(f'Current month: {current_month}, Carbon intensity baseline threshold: {baseline_threshold} gCO2/kWh')

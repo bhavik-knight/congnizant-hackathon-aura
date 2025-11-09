@@ -3,9 +3,13 @@ import axios from 'axios';
 // Create axios instance with base configuration
 const api = axios.create({
     baseURL: import.meta.env.VITE_API_URL || 'http://localhost:8000',
-    timeout: 10000,
+    timeout: 45000, // Increased timeout
     headers: {
         'Content-Type': 'application/json',
+    },
+    // Configure retry behavior for specific status codes
+    validateStatus: function (status) {
+        return (status >= 200 && status < 300) || status === 408 || status === 503;
     },
 });
 

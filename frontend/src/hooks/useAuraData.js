@@ -18,19 +18,35 @@ export const useDashboardData = () => {
                 setError(null);
 
                 // Fetch data in parallel
+                // Helper function for retrying failed requests
+                const retryRequest = async (request, retries = 3, delay = 2000) => {
+                    for (let i = 0; i < retries; i++) {
+                        try {
+                            return await request();
+                        } catch (err) {
+                            if (i === retries - 1) throw err;
+                            await new Promise(resolve => setTimeout(resolve, delay));
+                        }
+                    }
+                };
+
                 const [forecastResponse, demandResponse] = await Promise.allSettled([
-                    dashboardAPI.getCarbonForecast(),
-                    dashboardAPI.getDemandPrediction(),
+                    retryRequest(() => dashboardAPI.getCarbonForecast()),
+                    retryRequest(() => dashboardAPI.getDemandPrediction()),
                 ]);
 
                 const newData = {};
 
                 if (forecastResponse.status === 'fulfilled') {
                     newData.carbonForecast = forecastResponse.value;
+                } else {
+                    console.error('Failed to fetch carbon forecast:', forecastResponse.reason);
                 }
 
                 if (demandResponse.status === 'fulfilled') {
                     newData.demandPrediction = demandResponse.value;
+                } else {
+                    console.error('Failed to fetch demand prediction:', demandResponse.reason);
                 }
 
                 setData(newData);

@@ -1,3 +1,4 @@
+import { motion } from 'framer-motion';
 import { Link, useLocation } from 'react-router-dom';
 import {
     Drawer,
@@ -49,7 +50,13 @@ const Sidebar = ({ open, onClose }) => {
     const location = useLocation();
 
     const drawerContent = (
-        <Box sx={{ width: drawerWidth }}>
+        <motion.div
+            initial={{ x: -drawerWidth }}
+            animate={{ x: 0 }}
+            exit={{ x: -drawerWidth }}
+            transition={{ duration: 0.2 }}
+            style={{ width: drawerWidth }}
+        >
             <Box sx={{ p: 2, display: 'flex', alignItems: 'center' }}>
                 <EcoIcon sx={{ mr: 1, color: theme.palette.secondary.main }} />
                 <Typography variant="h6" sx={{ fontWeight: 600 }}>
@@ -135,7 +142,7 @@ const Sidebar = ({ open, onClose }) => {
                     </Box>
                 </Box>
             </Box>
-        </Box>
+        </motion.div>
     );
 
     return (
