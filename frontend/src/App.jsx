@@ -161,6 +161,19 @@ const AnimatedRoutes = () => {
                         </motion.div>
                     }
                 />
+                <Route
+                    path="/chat-bot"
+                    element={
+                        <motion.div
+                            initial={{ opacity: 0, y: 20 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            exit={{ opacity: 0, y: -20 }}
+                            transition={{ duration: 0.3 }}
+                        >
+                            <ChatBotPage />
+                        </motion.div>
+                    }
+                />
             </Routes>
         </AnimatePresence>
     );
@@ -176,7 +189,7 @@ function App() {
     return (
         <ThemeProvider theme={theme}>
             <CssBaseline />
-            <Router>
+            <Router future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
                 <Box sx={{ display: 'flex', minHeight: '100vh' }}>
                     <Navbar onMenuClick={toggleSidebar} />
                     <Sidebar open={sidebarOpen} onClose={toggleSidebar} />
