@@ -7,12 +7,14 @@ import { Box } from '@mui/material';
 // Components
 import Navbar from './components/Navbar';
 import Sidebar from './components/Sidebar';
+import Chatbot from './components/Chatbot/Chatbot';
 
 // Pages
 import HomePage from './pages/HomePage';
 import DashboardPage from './pages/DashboardPage';
 import NotificationCenterPage from './pages/NotificationCenterPage';
 import AnalyticsPage from './pages/AnalyticsPage';
+import ChatBotPage from './pages/ChatBotPage';
 
 // Material-UI Theme
 const theme = createTheme({
@@ -110,8 +112,12 @@ function App() {
                             <Route path="/dashboard" element={<DashboardPage />} />
                             <Route path="/notifications" element={<NotificationCenterPage />} />
                             <Route path="/analytics" element={<AnalyticsPage />} />
+                            <Route path="/chat-bot" element={<ChatBotPage />} />
                         </Routes>
                     </Box>
+
+                    {/* Chatbot */}
+                    <Chatbot />
                 </Box>
             </Router>
         </ThemeProvider>
