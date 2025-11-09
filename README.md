@@ -77,31 +77,23 @@ AURA/
 - **Node.js 18+** with `pnpm` package manager
 - **Git** for version control
 
-### One-Command Setup & Run
-
-The easiest way to get started is using the provided `run.sh` script:
-
+### Manual Setup (Alternative)
+clone the git repo
 ```bash
-# Make the script executable (first time only)
-chmod +x run.sh
-
-# Run the complete application
-./run.sh
+git clone <repo-name>
+cd <repo-name>
 ```
 
-This script will:
-1. Train/update the ML models for energy forecasting
-2. Start the FastAPI backend server
-3. Launch the React frontend development server
-
-### Manual Setup (Alternative)
-
-If you prefer to run components individually:
 
 #### 1. Install Python Dependencies
 ```bash
 # Install uv if not already installed
-pip install uv
+reference: https://docs.astral.sh/uv/getting-started/installation/#__tabbed_1_2
+
+- Mac/Linux (Unix System)
+curl -LsSf https://astral.sh/uv/install.sh | sh
+- Windows
+powershell -ExecutionPolicy ByPass -c "irm https://astral.sh/uv/install.ps1 | iex"
 
 # Install project dependencies
 uv sync
@@ -221,13 +213,6 @@ VITE_API_BASE_URL=http://localhost:8000/api
 NOTIFICATION_ENABLED=true
 NOTIFICATION_FREQUENCY=hourly
 NOTIFICATION_TYPES=green_window,achievements,discounts
-
-# Gamification Configuration
-GAMIFICATION_ENABLED=true
-POINTS_PER_GREEN_USAGE=10
-BADGE_THRESHOLDS=50,100,250,500,1000
-DISCOUNT_TIERS=bronze:5%,silver:10%,gold:15%,platinum:20%
-LEADERBOARD_UPDATE_INTERVAL=hourly
 ```
 
 ### Model Parameters
@@ -236,12 +221,6 @@ Adjust ML model parameters in the respective Python files:
 - `ml_models/seasonal_supply_model_builder.py` - Seasonal baseline calculation
 - `ml_models/compute_green_window.py` - Green window detection thresholds
 
-### Gamification Rules
-Configure gamification behavior in `backend/gamification.py`:
-- Points calculation algorithms
-- Badge earning criteria
-- Discount eligibility rules
-- Leaderboard ranking logic
 
 ## 🤝 Contributing
 
@@ -307,25 +286,5 @@ lsof -ti:3000,8000 | xargs kill -9
 uv run uvicorn backend.main:app --port 8001
 cd frontend && pnpm run dev --port 3001
 ```
-
-**Notification issues:**
-```bash
-# Check notification service status
-curl http://localhost:8000/api/notifications/status
-
-# Reset user preferences
-# Access user settings in the frontend dashboard
-```
-
-**Gamification not working:**
-```bash
-# Check gamification service
-curl http://localhost:8000/api/gamification/status
-
-# Reset user points (admin only)
-curl -X POST http://localhost:8000/api/admin/reset-points -d '{"user_id": "user123"}'
-```
-
----
 
 **Built with ❤️ for a sustainable future**
