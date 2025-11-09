@@ -68,7 +68,11 @@ try:
     print("--- Model Training Complete ---")
 
     # --- Save the Model as a File ---
-    model_filename = 'aura_model.joblib'
+    # Create outputs directory if it doesn't exist
+    outputs_dir = Path(__file__).parent.parent / 'outputs'
+    outputs_dir.mkdir(exist_ok=True)
+
+    model_filename = outputs_dir / 'aura_model.joblib'
     joblib.dump(results, model_filename)
 
     print(f"--- Success! Model saved as '{model_filename}' ---")

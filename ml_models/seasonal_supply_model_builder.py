@@ -3,11 +3,6 @@ import pandas as pd
 import json
 
 print("--- Starting Supply Model Builder ---")
-try:
-    output_path = Path(__file__).parent.parent.joinpath("output/seasonal_baseline.json")
-except Exception as e:
-    output_path = Path(__file__).parent.parent.mkdir("output").joinpath("seasonal_baseline.json")
-
 
 try:
     # Load the monthly generation data
@@ -43,11 +38,16 @@ try:
     # Create the final lookup table (our "formula")
     seasonal_baseline_dict = df_avg_monthly.set_index('month')['average_hourly_mw'].round(1).to_dict()
 
-    # Save the lookup table to a JSON file
-    with open('seasonal_baseline.json', 'w') as f:
+    # Create outputs directory if it doesn't exist
+    outputs_dir = Path(__file__).parent.parent / 'outputs'
+    outputs_dir.mkdir(exist_ok=True)
+
+    # Save the lookup table to a JSON file in outputs directory
+    output_path = outputs_dir / 'seasonal_baseline.json'
+    with open(output_path, 'w') as f:
         json.dump(seasonal_baseline_dict, f, indent=4)
 
-    print(f"--- Success! Created 'seasonal_baseline.json' ---")
+    print(f"--- Success! Created '{output_path}' ---")
     print(seasonal_baseline_dict)
 
 except FileNotFoundError:

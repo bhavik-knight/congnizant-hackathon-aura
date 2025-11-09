@@ -6,10 +6,11 @@ import numpy as np
 
 ROOT = Path(__file__).parent.parent
 DATA = ROOT / 'data' / 'hourly_load_data.csv'
-MODEL = Path(__file__).parent / 'aura_model.joblib'
-SEASONAL = Path(__file__).parent / 'seasonal_baseline.json'
-OUT_CSV = Path(__file__).parent / 'aura_forecast_24h_with_carbon.csv'
-OUT_WINDOW = Path(__file__).parent / 'aura_green_window.json'
+MODEL = ROOT / 'outputs' / 'aura_model.joblib'
+SEASONAL = ROOT / 'outputs' / 'seasonal_baseline.json'
+OUTPUTS_DIR = ROOT / 'outputs'
+OUT_CSV = OUTPUTS_DIR / 'aura_forecast_24h_with_carbon.csv'
+OUT_WINDOW = OUTPUTS_DIR / 'aura_green_window.json'
 
 def detect_header(csv_path):
     for hr in range(5):
@@ -46,7 +47,18 @@ def load_load_series():
     return df
 
 
-def main():
+def forecast_24h_demand(steps=24):
+    """
+    Forecast the next 24 hours demand, renewable baseload, and fossil fuel components
+    based on the trained model.
+
+    Returns:
+        pd.DataFrame: Forecast data with columns:
+        - ds: timestamp
+        - Forecast_Load_MW: forecasted load
+        - Renewable_Baseload_MW: renewable baseload
+        - Fossil_Fuel_MW: fossil fuel component
+    """
     # Load data
     df = load_load_series()
 
@@ -56,16 +68,13 @@ def main():
 
     # Load model
     if not MODEL.exists():
-        print('Model file not found, exiting')
-        return
+        raise FileNotFoundError(f"Model file not found: {MODEL}")
     try:
         results = joblib.load(MODEL)
     except Exception as e:
-        print('Could not load model:', e)
-        return
+        raise RuntimeError(f"Could not load model: {e}")
 
     # Forecast next 24 hours
-    steps = 24
     try:
         forecast_res = results.get_forecast(steps=steps)
         forecast_mean = forecast_res.predicted_mean
@@ -90,6 +99,19 @@ def main():
     # Clip negative fossil (renewables exceed load)
     forecast_df['Fossil_Fuel_MW'] = forecast_df['Fossil_Fuel_MW'].clip(lower=0.0)
 
+    return forecast_df
+
+
+def compute_carbon_intensity(forecast_df):
+    """
+    Compute carbon intensity for the next 24 hours demand forecast.
+
+    Args:
+        forecast_df (pd.DataFrame): Forecast data from forecast_24h_demand()
+
+    Returns:
+        pd.DataFrame: Forecast data with added Carbon_Intensity_gCO2_per_kWh column
+    """
     # Compute carbon intensity (gCO2/kWh)
     def compute_ci(row):
         load = row['Forecast_Load_MW']
@@ -98,34 +120,164 @@ def main():
         fossil = row['Fossil_Fuel_MW']
         return (fossil * 700.0) / load
 
+    forecast_df = forecast_df.copy()
     forecast_df['Carbon_Intensity_gCO2_per_kWh'] = forecast_df.apply(compute_ci, axis=1)
 
-    # Save CSV
+    return forecast_df
+
+
+def classify_windows_by_carbon_intensity(forecast_df):
+    """
+    Task 3: Compare carbon intensity of next 24 hours to seasonal_baseline.json for that month,
+    and apply "green_window" or "dirty_window" labels.
+
+    Args:
+        forecast_df (pd.DataFrame): Forecast data with Carbon_Intensity_gCO2_per_kWh column
+
+    Returns:
+        pd.DataFrame: Forecast data with added window_type column
+    """
+    # Load seasonal baseline (assuming it contains carbon intensity thresholds in gCO2/kWh)
+    with open(SEASONAL, 'r') as f:
+        seasonal_baselines = json.load(f)
+
+    # Get current month for baseline lookup
+    current_month = pd.Timestamp.now().month
+    baseline_threshold = float(seasonal_baselines.get(str(current_month)) or seasonal_baselines.get(current_month) or 400.0)  # Default to 400 gCO2/kWh
+
+    print(f'Current month: {current_month}, Carbon intensity baseline threshold: {baseline_threshold} gCO2/kWh')
+
+    # Classify windows: green if carbon intensity < baseline, dirty otherwise
+    forecast_df = forecast_df.copy()
+    forecast_df['window_type'] = forecast_df['Carbon_Intensity_gCO2_per_kWh'].apply(
+        lambda ci: 'green_window' if pd.notna(ci) and ci < baseline_threshold else 'dirty_window'
+    )
+
+    return forecast_df, baseline_threshold
+
+
+def main():
+    # Create outputs directory if it doesn't exist
+    OUTPUTS_DIR.mkdir(exist_ok=True)
+
+    # Forecast next 24 hours demand
+    forecast_df = forecast_24h_demand(steps=24)
+
+    # Compute carbon intensity
+    forecast_df = compute_carbon_intensity(forecast_df)
+
+    # Task 3: Classify windows by carbon intensity comparison to seasonal baseline
+    forecast_df, baseline_threshold = classify_windows_by_carbon_intensity(forecast_df)
+
+    # Save CSV with classifications
     forecast_df.to_csv(OUT_CSV, index=False)
     print('Wrote', OUT_CSV)
 
-    # Identify Green Window: the hours with lowest carbon intensity
-    sorted_df = forecast_df.sort_values('Carbon_Intensity_gCO2_per_kWh')
-    # List top 6 greenest hours
-    green_hours = sorted_df.head(6)[['ds', 'Forecast_Load_MW', 'Renewable_Baseload_MW', 'Carbon_Intensity_gCO2_per_kWh']]
-    print('\nTop 6 greenest hours (lowest carbon intensity):')
-    print(green_hours.to_string(index=False))
+    # Identify Green and Dirty Windows
+    green_windows = forecast_df[forecast_df['window_type'] == 'green_window']
+    dirty_windows = forecast_df[forecast_df['window_type'] == 'dirty_window']
 
-    # Also compute best contiguous window (default 3 hours) and save as JSON
-    window_len = 3
-    if len(forecast_df) >= window_len:
-        ci_series = forecast_df.set_index('ds')['Carbon_Intensity_gCO2_per_kWh']
-        rolling = ci_series.rolling(window=window_len, min_periods=window_len).mean()
-        best_start = rolling.idxmin()
-        best_avg = float(rolling.min())
-        best_end = best_start + pd.Timedelta(hours=window_len - 1)
+    print(f'\nGreen windows (carbon intensity < {baseline_threshold}): {len(green_windows)} hours')
+    if len(green_windows) > 0:
+        print(green_windows[['ds', 'Carbon_Intensity_gCO2_per_kWh', 'window_type']].to_string(index=False))
 
-        window_df = forecast_df.set_index('ds').loc[best_start:best_end].reset_index()
+    print(f'\nDirty windows (carbon intensity >= {baseline_threshold}): {len(dirty_windows)} hours')
+    if len(dirty_windows) > 0:
+        print(dirty_windows[['ds', 'Carbon_Intensity_gCO2_per_kWh', 'window_type']].to_string(index=False))
+
+    # Find best contiguous green window (longest sequence of green hours)
+    if len(green_windows) > 0:
+        # Find consecutive green windows using a simpler approach
+        green_indices = forecast_df[forecast_df['window_type'] == 'green_window'].index
+        if len(green_indices) > 0:
+            # Find consecutive sequences
+            consecutive_groups = []
+            current_group = [green_indices[0]]
+
+            for i in range(1, len(green_indices)):
+                if green_indices[i] == green_indices[i-1] + 1:
+                    current_group.append(green_indices[i])
+                else:
+                    consecutive_groups.append(current_group)
+                    current_group = [green_indices[i]]
+            consecutive_groups.append(current_group)
+
+            # Find the longest group
+            longest_group = max(consecutive_groups, key=len)
+            longest_window = forecast_df.loc[longest_group]
+
+            best_start = longest_window['ds'].min()
+            best_end = longest_window['ds'].max()
+            best_avg = longest_window['Carbon_Intensity_gCO2_per_kWh'].mean()
+            window_len = len(longest_window)
+
+            print(f'\nBest contiguous green window: {window_len} hours from {best_start} to {best_end}')
+
+            # Create JSON output for the best green window
+            window_df = longest_window.reset_index()
+            out = {
+                'start': best_start.isoformat(),
+                'end': best_end.isoformat(),
+                'avg_carbon_intensity_gco2_per_kwh': float(best_avg),
+                'length_hours': window_len,
+                'baseline_threshold': baseline_threshold,
+                'window_type': 'green_window',
+                'rows': []
+            }
+            for _, r in window_df.iterrows():
+                out['rows'].append({
+                    'ds': r['ds'].isoformat(),
+                    'forecast_load_mw': float(r['Forecast_Load_MW']),
+                    'renewable_baseload_mw': float(r['Renewable_Baseload_MW']),
+                    'fossil_fuel_mw': float(r['Fossil_Fuel_MW']),
+                    'carbon_intensity_gco2_per_kwh': float(r['Carbon_Intensity_gCO2_per_kWh']),
+                    'window_type': r['window_type']
+                })
+        else:
+            # No green windows found, use the cleanest dirty window
+            print('\nNo green windows found. Using cleanest dirty window.')
+            cleanest_dirty = dirty_windows.nsmallest(3, 'Carbon_Intensity_gCO2_per_kWh')
+            best_start = cleanest_dirty['ds'].min()
+            best_end = cleanest_dirty['ds'].max()
+            best_avg = cleanest_dirty['Carbon_Intensity_gCO2_per_kWh'].mean()
+            window_len = len(cleanest_dirty)
+
+            window_df = cleanest_dirty.reset_index()
+            out = {
+                'start': best_start.isoformat(),
+                'end': best_end.isoformat(),
+                'avg_carbon_intensity_gco2_per_kwh': float(best_avg),
+                'length_hours': window_len,
+                'baseline_threshold': baseline_threshold,
+                'window_type': 'dirty_window',
+                'rows': []
+            }
+            for _, r in window_df.iterrows():
+                out['rows'].append({
+                    'ds': r['ds'].isoformat(),
+                    'forecast_load_mw': float(r['Forecast_Load_MW']),
+                    'renewable_baseload_mw': float(r['Renewable_Baseload_MW']),
+                    'fossil_fuel_mw': float(r['Fossil_Fuel_MW']),
+                    'carbon_intensity_gco2_per_kwh': float(r['Carbon_Intensity_gCO2_per_kWh']),
+                    'window_type': r['window_type']
+                })
+    else:
+        # No green windows at all, use the 3 cleanest hours
+        print('\nNo green windows found in forecast. Using 3 cleanest hours.')
+        cleanest_hours = forecast_df.nsmallest(3, 'Carbon_Intensity_gCO2_per_kWh')
+        best_start = cleanest_hours['ds'].min()
+        best_end = cleanest_hours['ds'].max()
+        best_avg = cleanest_hours['Carbon_Intensity_gCO2_per_kWh'].mean()
+        window_len = len(cleanest_hours)
+
+        window_df = cleanest_hours.reset_index()
         out = {
             'start': best_start.isoformat(),
             'end': best_end.isoformat(),
-            'avg_carbon_intensity_gco2_per_kwh': best_avg,
+            'avg_carbon_intensity_gco2_per_kwh': float(best_avg),
             'length_hours': window_len,
+            'baseline_threshold': baseline_threshold,
+            'window_type': 'dirty_window',
             'rows': []
         }
         for _, r in window_df.iterrows():
@@ -134,12 +286,42 @@ def main():
                 'forecast_load_mw': float(r['Forecast_Load_MW']),
                 'renewable_baseload_mw': float(r['Renewable_Baseload_MW']),
                 'fossil_fuel_mw': float(r['Fossil_Fuel_MW']),
-                'carbon_intensity_gco2_per_kwh': float(r['Carbon_Intensity_gCO2_per_kWh'])
+                'carbon_intensity_gco2_per_kwh': float(r['Carbon_Intensity_gCO2_per_kWh']),
+                'window_type': r['window_type']
             })
 
-        with open(OUT_WINDOW, 'w') as f:
-            json.dump(out, f, indent=2)
-        print('Wrote', OUT_WINDOW)
+    # Save the JSON output
+    with open(OUT_WINDOW, 'w') as f:
+        json.dump(out, f, indent=2)
+    print('Wrote', OUT_WINDOW)
+
+    # Also save complete 24-hour classification data for plotting
+    complete_data = {
+        'forecast_period': {
+            'start': forecast_df['ds'].min().isoformat(),
+            'end': forecast_df['ds'].max().isoformat(),
+            'baseline_threshold': baseline_threshold,
+            'current_month': pd.Timestamp.now().month
+        },
+        'hourly_classifications': []
+    }
+
+    for _, row in forecast_df.iterrows():
+        complete_data['hourly_classifications'].append({
+            'timestamp': row['ds'].isoformat(),
+            'hour': row['ds'].hour,
+            'forecast_load_mw': float(row['Forecast_Load_MW']),
+            'renewable_baseload_mw': float(row['Renewable_Baseload_MW']),
+            'fossil_fuel_mw': float(row['Fossil_Fuel_MW']),
+            'carbon_intensity_gco2_per_kwh': float(row['Carbon_Intensity_gCO2_per_kWh']),
+            'window_type': row['window_type']
+        })
+
+    # Save complete classification data
+    complete_out_path = OUTPUTS_DIR / 'complete_window_classification.json'
+    with open(complete_out_path, 'w') as f:
+        json.dump(complete_data, f, indent=2)
+    print('Wrote complete classification data to', complete_out_path)
 
 
 if __name__ == '__main__':

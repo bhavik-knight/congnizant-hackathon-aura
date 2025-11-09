@@ -1,0 +1,42 @@
+{
+  "start": "2025-01-01T02:00:00",
+  "end": "2025-01-01T05:00:00",
+  "avg_carbon_intensity_gco2_per_kwh": 404.90681957273506,
+  "length_hours": 4,
+  "baseline_threshold": 409.8,
+  "window_type": "green_window",
+  "rows": [
+    {
+      "ds": "2025-01-01T02:00:00",
+      "forecast_load_mw": 1203.5,
+      "renewable_baseload_mw": 499.4,
+      "fossil_fuel_mw": 704.1,
+      "carbon_intensity_gco2_per_kwh": 409.53053593685087,
+      "window_type": "green_window"
+    },
+    {
+      "ds": "2025-01-01T03:00:00",
+      "forecast_load_mw": 1181.23,
+      "renewable_baseload_mw": 499.4,
+      "fossil_fuel_mw": 681.83,
+      "carbon_intensity_gco2_per_kwh": 404.05424853754135,
+      "window_type": "green_window"
+    },
+    {
+      "ds": "2025-01-01T04:00:00",
+      "forecast_load_mw": 1173.92,
+      "renewable_baseload_mw": 499.4,
+      "fossil_fuel_mw": 674.5200000000001,
+      "carbon_intensity_gco2_per_kwh": 402.2113943028486,
+      "window_type": "green_window"
+    },
+    {
+      "ds": "2025-01-01T05:00:00",
+      "forecast_load_mw": 1180.34,
+      "renewable_baseload_mw": 499.4,
+      "fossil_fuel_mw": 680.9399999999999,
+      "carbon_intensity_gco2_per_kwh": 403.8310995136994,
+      "window_type": "green_window"
+    }
+  ]
+}
